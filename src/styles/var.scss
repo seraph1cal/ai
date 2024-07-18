@@ -1,0 +1,21 @@
+:root {
+  --el-border-color: rgba(230, 235, 255, 1);
+  --el-bg-color: #fafbff;
+  --el-border-radius-base: 2px;
+  --el-text-color-primary: #6f6fa8;
+  --el-color-primary: #4a4af4 !important;
+  --el-color-primary-light-9: #f0f3ff;
+}
+
+.el-input {
+  --el-input-text-color: var(--el-color-primary);
+  --el-input-placeholder-color: rgb(153, 153, 153);
+}
+.el-collapse {
+  --el-collapse-header-bg-color: var(--el-bg-color);
+  --el-collapse-content-bg-color: var(--el-bg-color);
+}
+
+.el-tag {
+  --el-tag-border-radius: 2px;
+}

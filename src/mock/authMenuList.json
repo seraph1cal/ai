@@ -1,0 +1,49 @@
+{
+  "code": 200,
+  "data": [
+    {
+      "path": "/home",
+      "name": "home",
+      "component": "/home/index",
+      "meta": {
+        "icon": "code-computer",
+        "title": "home",
+        "isLink": "",
+        "isHide": false,
+        "isFull": false,
+        "isAffix": true,
+        "isKeepAlive": true
+      }
+    },
+    {
+      "path": "/detail",
+      "name": "detail",
+      "component": "/detail/index",
+      "meta": {
+        "icon": "code-computer",
+        "title": "detail",
+        "isLink": "",
+        "isHide": false,
+        "isFull": false,
+        "isAffix": true,
+        "isKeepAlive": true
+      }
+    },
+
+    {
+      "path": "/icon",
+      "name": "Icon",
+      "component": "/icon/index",
+      "meta": {
+        "icon": "MapLocation",
+        "title": "icon",
+        "isLink": "",
+        "isHide": false,
+        "isFull": false,
+        "isAffix": true,
+        "isKeepAlive": true
+      }
+    }
+  ],
+  "msg": "成功"
+}
