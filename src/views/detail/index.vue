@@ -362,9 +362,8 @@ const renderCanvasWithBg = async (main, mask, color, draw, bg, restore) => {
   maskImage.src = mask;
   mainImage.src = main;
   bgImage.src = bg;
-  await imgLoaded(maskImage);
-  await imgLoaded(mainImage);
-  await imgLoaded(bgImage);
+
+  await Promise.all([imgLoaded(maskImage), imgLoaded(mainImage), imgLoaded(bgImage)]);
 
   const canvasWidth = mainImage.width;
   const canvasHeight = mainImage.height;
@@ -396,11 +395,10 @@ const renderCanvasWithBg = async (main, mask, color, draw, bg, restore) => {
   const bgImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
   ctx.drawImage(mainImage, offsetX, offsetY, drawWidth, drawHeight);
-
   const mainImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const copyData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(maskImage, offsetX, offsetY, drawWidth, drawHeight);
 
+  ctx.drawImage(maskImage, offsetX, offsetY, drawWidth, drawHeight);
   const maskImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
   for (let i = 0; i < mainImageData.data.length; i += 4) {
@@ -408,91 +406,55 @@ const renderCanvasWithBg = async (main, mask, color, draw, bg, restore) => {
       mainImageData.data[i] = bgImageData.data[i];
       mainImageData.data[i + 1] = bgImageData.data[i + 1];
       mainImageData.data[i + 2] = bgImageData.data[i + 2];
-      // mainImageData.data[i + 3] = 0;
     }
   }
-  if (isErase.value) {
-    if (restore) {
-      for (let k = 0; k < restore.length; k++) {
-        for (let i = 0; i < restore[k].path.length; i++) {
-          const x = Math.floor(restore[k].path[i].x);
-          const y = Math.floor(restore[k].path[i].y);
-          for (let dx = -restore[k].brush / 2; dx <= restore[k].brush / 2; dx++) {
-            for (let dy = -restore[k].brush / 2; dy <= restore[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                mainImageData.data[index] = copyData.data[index];
-                mainImageData.data[index + 1] = copyData.data[index + 1];
-                mainImageData.data[index + 2] = copyData.data[index + 2];
-                mainImageData.data[index + 3] = copyData.data[index + 3];
+
+  const applyBrush = (data, path, brush, sourceData, isDraw?) => {
+    const radius = Math.floor(brush / 2);
+    for (let i = 0; i < path.length; i++) {
+      const x = Math.floor(path[i].x);
+      const y = Math.floor(path[i].y);
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance <= radius) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+              const index = (ny * canvas.width + nx) * 4;
+              data[index] = sourceData[index];
+              data[index + 1] = sourceData[index + 1];
+              data[index + 2] = sourceData[index + 2];
+              if (!isDraw) {
+                data[index + 3] = sourceData[index + 3];
               }
             }
           }
         }
       }
     }
+  };
+
+  if (isErase.value) {
+    if (restore) {
+      for (let k = 0; k < restore.length; k++) {
+        applyBrush(mainImageData.data, restore[k].path, restore[k].brush, copyData.data);
+      }
+    }
     if (draw) {
       for (let k = 0; k < draw.length; k++) {
-        for (let i = 0; i < draw[k].path.length; i++) {
-          const x = Math.floor(draw[k].path[i].x);
-          const y = Math.floor(draw[k].path[i].y);
-          for (let dx = -draw[k].brush / 2; dx <= draw[k].brush / 2; dx++) {
-            for (let dy = -draw[k].brush / 2; dy <= draw[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                mainImageData.data[index] = bgImageData.data[index];
-                mainImageData.data[index + 1] = bgImageData.data[index + 1];
-                mainImageData.data[index + 2] = bgImageData.data[index + 2];
-              }
-            }
-          }
-        }
+        applyBrush(mainImageData.data, draw[k].path, draw[k].brush, bgImageData.data, true);
       }
     }
   } else {
     if (draw) {
       for (let k = 0; k < draw.length; k++) {
-        for (let i = 0; i < draw[k].path.length; i++) {
-          const x = Math.floor(draw[k].path[i].x);
-          const y = Math.floor(draw[k].path[i].y);
-          for (let dx = -draw[k].brush / 2; dx <= draw[k].brush / 2; dx++) {
-            for (let dy = -draw[k].brush / 2; dy <= draw[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                mainImageData.data[index] = bgImageData.data[index];
-                mainImageData.data[index + 1] = bgImageData.data[index + 1];
-                mainImageData.data[index + 2] = bgImageData.data[index + 2];
-              }
-            }
-          }
-        }
+        applyBrush(mainImageData.data, draw[k].path, draw[k].brush, bgImageData.data, true);
       }
     }
     if (restore) {
       for (let k = 0; k < restore.length; k++) {
-        for (let i = 0; i < restore[k].path.length; i++) {
-          const x = Math.floor(restore[k].path[i].x);
-          const y = Math.floor(restore[k].path[i].y);
-          for (let dx = -restore[k].brush / 2; dx <= restore[k].brush / 2; dx++) {
-            for (let dy = -restore[k].brush / 2; dy <= restore[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                mainImageData.data[index] = copyData.data[index];
-                mainImageData.data[index + 1] = copyData.data[index + 1];
-                mainImageData.data[index + 2] = copyData.data[index + 2];
-                mainImageData.data[index + 3] = copyData.data[index + 3];
-              }
-            }
-          }
-        }
+        applyBrush(mainImageData.data, restore[k].path, restore[k].brush, copyData.data);
       }
     }
   }
@@ -505,12 +467,10 @@ const renderCanvasNormal = async (main, mask, color, draw, bg, restore) => {
   const ctx = canvas.getContext('2d');
   const maskImage = new Image();
   const mainImage = new Image();
-  const bgImage = new Image();
   maskImage.src = mask;
   mainImage.src = main;
-  bgImage.src = bg;
-  await imgLoaded(maskImage);
-  await imgLoaded(mainImage);
+
+  await Promise.all([imgLoaded(maskImage), imgLoaded(mainImage)]);
 
   const canvasWidth = mainImage.width;
   const canvasHeight = mainImage.height;
@@ -557,96 +517,60 @@ const renderCanvasNormal = async (main, mask, color, draw, bg, restore) => {
     }
   }
 
-  if (isErase.value) {
-    if (restore) {
-      for (let k = 0; k < restore.length; k++) {
-        for (let i = 0; i < restore[k].path.length; i++) {
-          const x = Math.floor(restore[k].path[i].x);
-          const y = Math.floor(restore[k].path[i].y);
-          for (let dx = -restore[k].brush / 2; dx <= restore[k].brush / 2; dx++) {
-            for (let dy = -restore[k].brush / 2; dy <= restore[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                mainImageData.data[index] = copyData.data[index];
-                mainImageData.data[index + 1] = copyData.data[index + 1];
-                mainImageData.data[index + 2] = copyData.data[index + 2];
-                mainImageData.data[index + 3] = copyData.data[index + 3];
+  const applyBrush = (data, path, brush, _data, isDraw?) => {
+    const radius = Math.floor(brush / 2);
+    for (let i = 0; i < path.length; i++) {
+      const x = Math.floor(path[i].x);
+      const y = Math.floor(path[i].y);
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance <= radius) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+              const index = (ny * canvas.width + nx) * 4;
+              if (isDraw) {
+                if (_data) {
+                  data[index] = _data[0];
+                  data[index + 1] = _data[1];
+                  data[index + 2] = _data[2];
+                } else {
+                  data[index + 3] = 0;
+                }
+              } else {
+                data[index] = _data[index];
+                data[index + 1] = _data[index + 1];
+                data[index + 2] = _data[index + 2];
+                data[index + 3] = _data[index + 3];
               }
             }
           }
         }
       }
     }
+  };
+
+  if (isErase.value) {
+    if (restore) {
+      for (let k = 0; k < restore.length; k++) {
+        applyBrush(mainImageData.data, restore[k].path, restore[k].brush, copyData.data);
+      }
+    }
     if (draw) {
       for (let k = 0; k < draw.length; k++) {
-        for (let i = 0; i < draw[k].path.length; i++) {
-          const x = Math.floor(draw[k].path[i].x);
-          const y = Math.floor(draw[k].path[i].y);
-          for (let dx = -draw[k].brush / 2; dx <= draw[k].brush / 2; dx++) {
-            for (let dy = -draw[k].brush / 2; dy <= draw[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                if (color) {
-                  mainImageData.data[index] = color[0];
-                  mainImageData.data[index + 1] = color[1];
-                  mainImageData.data[index + 2] = color[2];
-                } else {
-                  mainImageData.data[index + 3] = 0;
-                }
-              }
-            }
-          }
-        }
+        applyBrush(mainImageData.data, draw[k].path, draw[k].brush, color, true);
       }
     }
   } else {
     if (draw) {
       for (let k = 0; k < draw.length; k++) {
-        for (let i = 0; i < draw[k].path.length; i++) {
-          const x = Math.floor(draw[k].path[i].x);
-          const y = Math.floor(draw[k].path[i].y);
-          for (let dx = -draw[k].brush / 2; dx <= draw[k].brush / 2; dx++) {
-            for (let dy = -draw[k].brush / 2; dy <= draw[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                if (color) {
-                  mainImageData.data[index] = color[0];
-                  mainImageData.data[index + 1] = color[1];
-                  mainImageData.data[index + 2] = color[2];
-                } else {
-                  mainImageData.data[index + 3] = 0;
-                }
-              }
-            }
-          }
-        }
+        applyBrush(mainImageData.data, draw[k].path, draw[k].brush, color, true);
       }
     }
     if (restore) {
       for (let k = 0; k < restore.length; k++) {
-        for (let i = 0; i < restore[k].path.length; i++) {
-          const x = Math.floor(restore[k].path[i].x);
-          const y = Math.floor(restore[k].path[i].y);
-          for (let dx = -restore[k].brush / 2; dx <= restore[k].brush / 2; dx++) {
-            for (let dy = -restore[k].brush / 2; dy <= restore[k].brush / 2; dy++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
-                const index = (ny * canvas.width + nx) * 4;
-                mainImageData.data[index] = copyData.data[index];
-                mainImageData.data[index + 1] = copyData.data[index + 1];
-                mainImageData.data[index + 2] = copyData.data[index + 2];
-                mainImageData.data[index + 3] = copyData.data[index + 3];
-              }
-            }
-          }
-        }
+        applyBrush(mainImageData.data, restore[k].path, restore[k].brush, copyData.data);
       }
     }
   }
@@ -676,6 +600,8 @@ async function renderCanvas(flag?) {
     isRecallDisable.value = false;
   }
   const { main, mask, color, draw, bg, restore } = target;
+  console.log(draw, 'draw');
+  console.log(restore, 'restore');
 
   if (bg) {
     renderCanvasWithBg(main, mask, color, draw, bg, restore);
@@ -742,6 +668,7 @@ function mouseHandler(e) {
     canvas.addEventListener('mousemove', mouseHandler);
     canvas.addEventListener('mouseup', mouseHandler);
     ctx.strokeStyle = '#5e6ff022';
+
     ctx.lineWidth = brushSize.value; // 设置画笔宽度
     ctx.lineCap = 'round'; // 设置线条端点样式
     ctx.lineJoin = 'round'; // 设置线条连接处样式

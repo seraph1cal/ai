@@ -19,7 +19,6 @@
     "commit": "git add -A && czg && git push"
   },
   "dependencies": {
-    "@antv/g6": "^4.3.5",
     "@element-plus/icons-vue": "^2.1.0",
     "@unocss/preset-rem-to-px": "^0.58.7",
     "@vueuse/core": "^10.4.1",

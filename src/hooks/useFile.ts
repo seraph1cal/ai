@@ -44,7 +44,7 @@ export default () => {
           await pushDrawData({ main, mask, color, draw, bg, restore });
           fn && fn();
         } else {
-          await pushDrawData({ ...(await getLastDrawData()), restore, bg: content, color: null });
+          await pushDrawData({ ...(await getLastDrawData()), bg: content, color: null });
           fn && fn();
         }
         resolve();
@@ -73,15 +73,16 @@ export default () => {
       uploadImageApi(data, fn);
     } else if (type == Action['BG']) {
       readBlob2Base64(data, ReadType['BG'], fn);
+      console.log(data, 'store');
     } else if (type == Action['COLOR']) {
       //bg ,color 只替换本身
-
       await pushDrawData({ ...(await getLastDrawData()), color: data, bg: null });
       fn && fn();
     } else if (type == Action['DRAW']) {
       //draw,保留全部,增加 draw
       const arr = (await getLastDrawData()).draw || [];
       arr.push(data);
+      console.log(data, 'store');
 
       await pushDrawData({ ...(await getLastDrawData()), draw: arr });
       fn && fn();
